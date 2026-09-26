@@ -11,6 +11,12 @@
     <string name="nextendo_server_ip_description">Address the online hostnames resolve to (51.178.29.194 by default)</string>
     <string name="nextendo_nat_ip">NAT check IP</string>
     <string name="nextendo_nat_ip_description">Second NAT-check vantage point (164.132.111.120 by default)</string>
+    <string name="nextendo_zerotier">ZeroTier mode</string>
+    <string name="nextendo_zerotier_description">Use your own ZeroTier/private server for online play, the NAT check and sign-in. Nothing is sent to nextendo.network while this is on. Turn on your ZeroTier VPN first.</string>
+    <string name="nextendo_zerotier_address">ZeroTier server address</string>
+    <string name="nextendo_zerotier_address_description">Private IPv4 address of your server (for example 10.x.x.x). Public addresses are refused.</string>
+    <string name="nextendo_zerotier_nat_address">ZeroTier NAT check address</string>
+    <string name="nextendo_zerotier_nat_address_description">A second address on the same server for the NAT check (it must differ from the server address)</string>
     <string name="nextendo_cloud_sync">Cloud save sync</string>
     <string name="nextendo_cloud_sync_description">Automatically pull saves on boot and push on exit</string>
     <string name="nextendo_friend_notifications">Friend online notifications</string>

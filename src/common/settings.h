@@ -737,6 +737,15 @@ struct Values {
                                             Category::Network};
     Setting<std::string> nextendo_nat_ip{linkage, "164.132.111.120", "nextendo_nat_ip",
                                          Category::Network};
+    // ZeroTier / private-network mode. When on, the game hostnames, the NAT check and the account
+    // API all go to the addresses below instead of the public Nextendo servers, and nothing falls
+    // back to nextendo.network. Only private IPv4 addresses are accepted (see
+    // common/nextendo_zerotier.h) because the account API carries the sign-in token.
+    Setting<bool> nextendo_zerotier{linkage, false, "nextendo_zerotier", Category::Network};
+    Setting<std::string> nextendo_zerotier_address{linkage, "",
+                                                   "nextendo_zerotier_address", Category::Network};
+    Setting<std::string> nextendo_zerotier_nat_address{
+        linkage, "", "nextendo_zerotier_nat_address", Category::Network};
     Setting<std::string> nextendo_pid{linkage, "", "nextendo_pid", Category::Network};
     // Governs the automatic pull-on-boot/push-on-stop cloud save sync only -- the manual
     // "Download Save" button in the Nextendo Account dialog is an explicit per-click action

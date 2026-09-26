@@ -1,3 +1,29 @@
+## Changes in the nx-mod fork
+
+This fork adds a **ZeroTier mode** for running Nextendo entirely on a private network, with nothing sent to
+nextendo.network. Everything else is unchanged.
+
+- **New setting group (Settings > Nextendo):** *ZeroTier mode* (off by default), *ZeroTier server address* and
+  *ZeroTier NAT check address*. Both addresses start empty; enter yours. Turn your ZeroTier VPN on first.
+- **When it is on:** the Nintendo hostnames, the NAT check and the Nextendo account API (sign-in, friends,
+  presence, cloud saves) all go to the address you entered. The account API is plain http inside the tunnel.
+  Only **private IPv4 addresses** are accepted (10/8, 172.16/12, 192.168/16, 100.64/10), because the sign-in
+  token rides on those requests. It never falls back to nextendo.network: with a bad address, account
+  requests point at a dead loopback port and the game hostnames resolve to loopback.
+- **The LDN VPN no longer evicts ZeroTier.** Android allows one VPN at a time, and the LDN tunnel started
+  whenever `config/ldn_network.ini` had a `bridge_host`. It now does not start when ZeroTier mode is on, or
+  when any other VPN is already active. (Needs `ACCESS_NETWORK_STATE`, added to the manifest.)
+- **Account URL changes at runtime:** the shared HTTP client is rebuilt when the base URL changes, instead of being
+  fixed at first use.
+- **Files:** `src/common/nextendo_zerotier.h` (address rules, header-only) and its test
+  `src/tests/common/nextendo_zerotier.cpp`; edits in `src/common/settings.h`,
+  `src/core/hle/service/sockets/sfdnsres.cpp`, `src/web_service/nextendo_api.cpp`, the Android settings
+  model/strings, `LdnVpnService.kt` and `AndroidManifest.xml`.
+- **CI:** `.github/workflows/build-apk.yml` also builds on pushes to `zerotier-option` (artifact only, no release).
+- **Not done:** the desktop (Qt) settings page has no ZeroTier controls yet; Android only.
+- **Server side:** this needs an account service that implements the same OAuth endpoints on the address you enter
+  (the `nextendo-account` service does; run it with `NEXTENDO_LOCAL_OPEN=1` for a private test stack).
+
 # Citron Neo — Nextendo Network / NZ:P Edition
 
 A fork of the [Citron Neo](https://github.com/citron-neo/emulator) with two

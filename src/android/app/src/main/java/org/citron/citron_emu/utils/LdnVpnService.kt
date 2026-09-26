@@ -5,12 +5,15 @@ package org.citron.citron_emu.utils
 
 import android.app.Activity
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import org.citron.citron_emu.R
 import org.citron.citron_emu.activities.EmulationActivity
+import org.citron.citron_emu.features.settings.model.BooleanSetting
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -80,7 +83,23 @@ class LdnVpnService : VpnService() {
          * Returns true if the service was started immediately, false if consent is pending
          * (the activity's onActivityResult for REQUEST_CODE_PREPARE should retry this call).
          */
+        /**
+         * True when some VPN (for example ZeroTier) is already up. Android allows one VPN at a
+         * time, so establishing ours would silently evict it.
+         */
+        private fun anotherVpnActive(activity: Activity): Boolean {
+            val cm = activity.getSystemService(ConnectivityManager::class.java) ?: return false
+            return cm.allNetworks.any { network ->
+                cm.getNetworkCapabilities(network)
+                    ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+            }
+        }
+
         fun prepareAndStart(activity: Activity): Boolean {
+            if (anotherVpnActive(activity)) {
+                Log.info("[LdnVpnService] another VPN is active; not starting the LDN tunnel so it is not evicted")
+                return false
+            }
             val consentIntent = VpnService.prepare(activity)
             if (consentIntent != null) {
                 activity.startActivityForResult(consentIntent, REQUEST_CODE_PREPARE)
@@ -95,6 +114,8 @@ class LdnVpnService : VpnService() {
          * the consent dialog so users who never use LDN are not prompted.
          */
         fun isConfigured(): Boolean {
+            // ZeroTier mode runs over the user's own VPN; never start a second one.
+            if (BooleanSetting.NEXTENDO_ZEROTIER.getBoolean()) return false
             val dir = DirectoryInitialization.userDirectory ?: return false
             val file = File("$dir/config/ldn_network.ini")
             if (!file.exists()) return false

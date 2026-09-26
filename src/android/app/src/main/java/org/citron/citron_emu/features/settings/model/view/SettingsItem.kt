@@ -719,6 +719,27 @@ abstract class SettingsItem(
             )
             put(
                 SwitchSetting(
+                    BooleanSetting.NEXTENDO_ZEROTIER,
+                    titleId = R.string.nextendo_zerotier,
+                    descriptionId = R.string.nextendo_zerotier_description
+                )
+            )
+            put(
+                StringInputSetting(
+                    StringSetting.NEXTENDO_ZEROTIER_ADDRESS,
+                    titleId = R.string.nextendo_zerotier_address,
+                    descriptionId = R.string.nextendo_zerotier_address_description
+                )
+            )
+            put(
+                StringInputSetting(
+                    StringSetting.NEXTENDO_ZEROTIER_NAT_ADDRESS,
+                    titleId = R.string.nextendo_zerotier_nat_address,
+                    descriptionId = R.string.nextendo_zerotier_nat_address_description
+                )
+            )
+            put(
+                SwitchSetting(
                     BooleanSetting.NEXTENDO_CLOUD_SYNC,
                     titleId = R.string.nextendo_cloud_sync,
                     descriptionId = R.string.nextendo_cloud_sync_description

@@ -12,7 +12,9 @@ enum class StringSetting(override val key: String) : AbstractStringSetting {
 
     // Nextendo Network
     NEXTENDO_SERVER_IP("nextendo_server_ip"),
-    NEXTENDO_NAT_IP("nextendo_nat_ip");
+    NEXTENDO_NAT_IP("nextendo_nat_ip"),
+    NEXTENDO_ZEROTIER_ADDRESS("nextendo_zerotier_address"),
+    NEXTENDO_ZEROTIER_NAT_ADDRESS("nextendo_zerotier_nat_address");
 
     override fun getString(needsGlobal: Boolean): String = NativeConfig.getString(key, needsGlobal)
 

@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <span>
@@ -26,6 +27,8 @@
 #include "common/hex_util.h"
 #include "common/logging.h"
 #include "common/nextendo_account.h"
+#include "common/nextendo_zerotier.h"
+#include "common/settings.h"
 #include "common/string_util.h"
 #include "web_service/nextendo_api.h"
 
@@ -266,17 +269,22 @@ std::optional<std::string> SanitizeBaseUrl(std::string raw) {
     return raw;
 }
 
+// The base URL can change at runtime (the ZeroTier option), so the shared client is rebuilt when
+// it does instead of being fixed at first use. Callers hold Send()'s mutex.
 httplib::Client& SharedClient() {
-    static httplib::Client client = [] {
-        httplib::Client c{BaseUrl()};
-        c.set_connection_timeout(TimeoutSeconds);
-        c.set_read_timeout(TimeoutSeconds);
-        c.set_follow_location(true);
-        c.set_keep_alive(true);
-        ApplyCaCertPath(c);
-        return c;
-    }();
-    return client;
+    static std::unique_ptr<httplib::Client> client;
+    static std::string client_base;
+    const std::string base = BaseUrl();
+    if (!client || base != client_base) {
+        client = std::make_unique<httplib::Client>(base);
+        client->set_connection_timeout(TimeoutSeconds);
+        client->set_read_timeout(TimeoutSeconds);
+        client->set_follow_location(true);
+        client->set_keep_alive(true);
+        ApplyCaCertPath(*client);
+        client_base = base;
+    }
+    return *client;
 }
 
 httplib::Result Send(const std::string& method, const std::string& path, const std::string& body,
@@ -332,6 +340,21 @@ std::string ErrorFrom(const std::string& payload, const std::string& fallback) {
 } // Anonymous namespace
 
 std::string BaseUrl() {
+    // ZeroTier / private-network mode: the account API is the address the user entered, over
+    // plain http inside the tunnel. It never falls back to nextendo.network: with a bad address
+    // it points at a dead loopback port, so the sign-in token cannot reach any public server.
+    if (Settings::values.nextendo_zerotier.GetValue()) {
+        const std::string address = Settings::values.nextendo_zerotier_address.GetValue();
+        if (const auto url = Common::NextendoZeroTier::AccountBaseUrl(address)) {
+            return *url;
+        }
+        LOG_ERROR(WebService,
+                  "ZeroTier address \"{}\" is not a private IPv4 address; Nextendo account "
+                  "requests are disabled",
+                  address);
+        return "http://127.0.0.1:1";
+    }
+
     static const std::string url = [] {
         const char* env = std::getenv("NEXTENDO_API");
         if (env && *env) {

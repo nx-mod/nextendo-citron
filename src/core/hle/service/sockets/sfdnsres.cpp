@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/nextendo_zerotier.h"
 #include "common/settings.h"
 #include "common/string_util.h"
 #include "common/swap.h"
@@ -93,6 +94,10 @@ static std::string GetConfiguredIp(const std::string& setting, const char* env_v
 // On accepte donc aussi une activation par l'environnement, exactement comme GetConfiguredIp le
 // fait deja pour les deux adresses. Une valeur vide, « 0 », « false » ou « no » ne l'active pas.
 static bool RedirectionNextendoActive() {
+    // ZeroTier mode is a Nextendo mode: it always redirects, whatever enable_nextendo says.
+    if (Settings::values.nextendo_zerotier.GetValue()) {
+        return true;
+    }
     if (Settings::values.enable_nextendo.GetValue()) {
         return true;
     }
@@ -109,10 +114,27 @@ static std::optional<std::string> GetNextendoRedirectIp(const std::string& host)
         return std::nullopt;
     }
 
-    const std::string server_ip =
-        GetConfiguredIp(Settings::values.nextendo_server_ip.GetValue(), "NEXTENDO_SERVER_IP");
-    const std::string nat_ip =
-        GetConfiguredIp(Settings::values.nextendo_nat_ip.GetValue(), "NEXTENDO_NAT_IP");
+    std::string server_ip;
+    std::string nat_ip;
+    if (Settings::values.nextendo_zerotier.GetValue()) {
+        // Private network mode. Fail closed: an address that is not a private IPv4 literal
+        // resolves to loopback, so nothing is ever redirected toward a public server by mistake.
+        const auto zt_server =
+            Common::NextendoZeroTier::HostOnly(Settings::values.nextendo_zerotier_address.GetValue());
+        const auto zt_nat = Common::NextendoZeroTier::HostOnly(
+            Settings::values.nextendo_zerotier_nat_address.GetValue());
+        server_ip = zt_server.value_or("127.0.0.1");
+        nat_ip = zt_nat.value_or(server_ip);
+        if (!zt_server) {
+            LOG_ERROR(Service, "[Nextendo] ZeroTier address '{}' is not a private IPv4 address; "
+                               "redirecting to loopback",
+                      Settings::values.nextendo_zerotier_address.GetValue());
+        }
+    } else {
+        server_ip =
+            GetConfiguredIp(Settings::values.nextendo_server_ip.GetValue(), "NEXTENDO_SERVER_IP");
+        nat_ip = GetConfiguredIp(Settings::values.nextendo_nat_ip.GetValue(), "NEXTENDO_NAT_IP");
+    }
 
     if (host.starts_with("nncs2-") && host.ends_with(".n.n.srv.nintendo.net")) {
         LOG_INFO(Service, "[Nextendo] Redirecting NAT check host '{}' -> '{}'", host, nat_ip);
