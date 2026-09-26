@@ -1,0 +1,61 @@
+name: Build libzt (Android arm64)
+
+# Builds only libzt (from nx-mod/libzt-nx) for Android, so the embedded ZeroTier work can be
+# iterated in minutes instead of waiting for the whole app. Artifact only; nothing is released.
+on:
+  workflow_dispatch:
+  push:
+    branches: [zerotier-option]
+    paths:
+      - .github/workflows/build-libzt-android.yml
+
+jobs:
+  libzt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: System packages
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake ninja-build swig pkg-config
+
+      - name: Android NDK
+        run: |
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-11076708_latest.zip
+          mkdir -p android-sdk/cmdline-tools && mv cmdline-tools android-sdk/cmdline-tools/latest
+          export ANDROID_HOME=$PWD/android-sdk
+          yes | android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
+          android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "ndk;26.1.10909125" > /dev/null
+          echo "ANDROID_NDK=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      - name: Get libzt-nx (with its submodules)
+        run: |
+          git clone --depth 1 https://github.com/nx-mod/libzt-nx.git libzt
+          git -C libzt submodule update --init --recursive --depth 1
+          git -C libzt log -1 --format='libzt-nx %h %s'
+
+      - name: Configure
+        run: |
+          cmake -S libzt -B build -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-30 \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+
+      - name: What was produced
+        run: |
+          find build -name 'libzt*' -type f | head -20
+          ls -la build/lib 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libzt-android-arm64
+          path: |
+            build/**/libzt*.so
+            build/**/libzt*.a
+            libzt/include/ZeroTierSockets.h
+          if-no-files-found: error
