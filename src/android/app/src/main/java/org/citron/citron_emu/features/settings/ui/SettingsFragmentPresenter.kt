@@ -1068,6 +1068,9 @@ class SettingsFragmentPresenter(
             add(StringSetting.NEXTENDO_SERVER_IP.key)
             add(StringSetting.NEXTENDO_NAT_IP.key)
             add(BooleanSetting.NEXTENDO_ENABLE.key)
+            add(BooleanSetting.NEXTENDO_ZEROTIER.key)
+            add(StringSetting.NEXTENDO_ZEROTIER_ADDRESS.key)
+            add(StringSetting.NEXTENDO_ZEROTIER_NAT_ADDRESS.key)
         }
     }
 
@@ -1076,9 +1079,13 @@ class SettingsFragmentPresenter(
 
     private fun runNextendoConnectionTest() {
         Thread {
+            // ZeroTier mode tests the addresses it actually uses.
+            val zerotier = BooleanSetting.NEXTENDO_ZEROTIER.getBoolean()
             val nat = NextendoConnectionTest.probeNat(
-                StringSetting.NEXTENDO_SERVER_IP.getString(),
-                StringSetting.NEXTENDO_NAT_IP.getString()
+                if (zerotier) StringSetting.NEXTENDO_ZEROTIER_ADDRESS.getString()
+                else StringSetting.NEXTENDO_SERVER_IP.getString(),
+                if (zerotier) StringSetting.NEXTENDO_ZEROTIER_NAT_ADDRESS.getString()
+                else StringSetting.NEXTENDO_NAT_IP.getString()
             )
             val ping = NativeLibrary.nextendoPingBackend()
             val natText = context.getString(
