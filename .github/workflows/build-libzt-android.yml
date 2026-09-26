@@ -35,6 +35,14 @@ jobs:
           git -C libzt submodule update --init --recursive --depth 1
           git -C libzt log -1 --format='libzt-nx %h %s'
 
+      - name: Patch libzt for Android (no UPnP port mapping)
+        # CMake defines ZT_USE_MINIUPNPC for every non-Switch build, which makes NodeService.cpp call
+        # PortMapper, but PortMapper.cpp is never compiled: the link fails. Port mapping is useless
+        # on a phone, so leave it out on Android. Done here so the fork itself stays untouched.
+        run: |
+          perl -0pi -e 's/if\(NOT SWITCH\)(\s*\n\s*set\(ZT_FLAGS "\$\{ZT_FLAGS\} -DZT_USE_MINIUPNPC=1"\))/if(NOT SWITCH AND NOT CMAKE_SYSTEM_NAME STREQUAL "Android")$1/' libzt/CMakeLists.txt
+          grep -n -B2 'ZT_USE_MINIUPNPC=1' libzt/CMakeLists.txt
+
       - name: Configure
         run: |
           cmake -S libzt -B build -G Ninja \
